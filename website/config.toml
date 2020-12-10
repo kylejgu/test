@@ -11,7 +11,7 @@ theme = "hugo-sustain"
   post = "/post/:year/:month/:day/:slug"
 
 [params]
-  avatar = ""
+  avatar = "profile.JPG"
   author = "Kyle Gu"
   occupation = "pre-medical biology major"
   about = "I love hip hop, sports, traveling, Netflix, and boba."
