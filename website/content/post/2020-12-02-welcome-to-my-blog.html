@@ -1,0 +1,37 @@
+
+
+
+<p>+++ title = &quot;Blog: Reticulate&quot; description = &quot;Welcome to the inner machinations of my mind&quot; tags = [] categories = [] +++</p>
+<p><a href="/projects/project1/">Link to project 1</a></p>
+<p><a href="https://www.google.com">Link to google</a></p>
+<pre class="r"><code>head(quakes)</code></pre>
+<pre><code>##      lat   long depth mag stations
+## 1 -20.42 181.62   562 4.8       41
+## 2 -20.62 181.03   650 4.2       15
+## 3 -26.00 184.10    42 5.4       43
+## 4 -17.97 181.66   626 4.1       19
+## 5 -20.42 181.96   649 4.0       11
+## 6 -19.68 184.31   195 4.0       12</code></pre>
+<pre class="python"><code>import pandas as pd
+import numpy as np
+
+quakes=pd.read_csv(&quot;https://vincentarelbundock.github.io/Rdatasets/csv/datasets/quakes.csv&quot;,index_col=0)
+print(quakes.head())</code></pre>
+<pre><code>##      lat    long  depth  mag  stations
+## 1 -20.42  181.62    562  4.8        41
+## 2 -20.62  181.03    650  4.2        15
+## 3 -26.00  184.10     42  5.4        43
+## 4 -17.97  181.66    626  4.1        19
+## 5 -20.42  181.96    649  4.0        11</code></pre>
+<pre class="python"><code>print(quakes.mag.agg([&#39;min&#39;,&#39;max&#39;,&#39;mean&#39;,&#39;median&#39;])) #summary stats for magnitude</code></pre>
+<pre><code>## min       4.0000
+## max       6.4000
+## mean      4.6204
+## median    4.6000
+## Name: mag, dtype: float64</code></pre>
+<pre class="python"><code>print(quakes.depth.agg([&#39;min&#39;,&#39;max&#39;,&#39;mean&#39;,&#39;median&#39;])) #summary stats for depth</code></pre>
+<pre><code>## min        40.000
+## max       680.000
+## mean      311.371
+## median    247.000
+## Name: depth, dtype: float64</code></pre>

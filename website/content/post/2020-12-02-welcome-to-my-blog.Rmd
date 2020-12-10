@@ -1,0 +1,30 @@
++++
+title = "Blog: Reticulate"
+description = "Welcome to the inner machinations of my mind"
+tags = []
+categories = []
++++
+
+[Link to project 1](/projects/project1/)
+
+[Link to google](https://www.google.com)
+
+```{r}
+head(quakes)
+```
+
+
+```{python}
+import pandas as pd
+import numpy as np
+
+quakes=pd.read_csv("https://vincentarelbundock.github.io/Rdatasets/csv/datasets/quakes.csv",index_col=0)
+print(quakes.head())
+
+print(quakes.mag.agg(['min','max','mean','median'])) #summary stats for magnitude
+print(quakes.depth.agg(['min','max','mean','median'])) #summary stats for depth
+```
+
+
+
+

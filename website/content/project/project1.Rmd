@@ -1,0 +1,140 @@
+---
+title: "Project 1: Exploratory Data Analysis"
+author: "Kyle Gu"
+date: "10/8/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, fig.align = "center", warning = F, message = F,
+tidy=TRUE, tidy.opts=list(width.cutoff=60), R.options=list(max.print=100))
+```
+
+
+```{r cars}
+library(tidyverse)
+library("kableExtra")
+nba_allstar <- read.csv("https://drive.google.com/uc?export=download&id=1adb3W6h8KQRkLQ_X4Z39cG-zQtnuEiDy")
+nba_attendance <- read.csv("https://drive.google.com/uc?export=download&id=1ko3v_rGutSHIhPC_yXoSNOMkR7EaAEBg")
+
+```
+
+### Introduction
+
+I selected two datasets from data.world: one for NBA All-Star player selections and another for NBA game attendance. The `nba_allstar` dataset contains the variables: year, player, player metrics (position, height, weight), team, conference, draft status, and nationalty. The `nba_attendance` dataset contains the variables: year, rank, team, and a variety of attendance variables for home and away games. All data were derived from the NBA's official records and basketball-reference.com.
+
+Since childhood, I spent much of my leisure time playing and watching basketball. I had the privilege of attending many Houston Rockets' games and marveled at the effect of crowd intensity each game. The crowd served as a huge momentum boost for the Rockets, especially when star players made great plays. This observation inspired the project because I wanted to analyze if and how the presence of All-Star players affected game attendance. I expect to find a positive association between the number of All-Star players and the quantity of fan attendance.
+
+
+### Joining/Merging
+
+```{r}
+left_join(nba_allstar, nba_attendance, by= "Team") -> combined_nba
+combined_nba <- combined_nba[which(combined_nba$Year==combined_nba$Starting.Year),]
+
+head(combined_nba) %>% kbl() %>% kable_material(c("striped", "hover"))
+```
+
+I used the *left_join* function to join `nba_allstar` with `nba_attendance` by the common *Team* variable. I chose *left_join* because it would allow me to identify the number of All-Star players on each team from 2000-2015 and assess their impact on game attendance during the season(s) of their All-Star selection. Before joining, the `nba_allstar` dataset had 439 observations and the `nba_attendance` dataset had 476 observations. After joining, I modified the `combined_nba` dataset to retain all the observations in which the players' year of All-Star selection matched the year of fan attendance and dropped those that did not match, resulting in 410 observations for `combined_nba`.
+
+
+### Wrangling
+
+```{r}
+combined_nba <- combined_nba %>% select(Year, Player, Team, Home..Total.Attendance, Home..Total.Games, Away..Total.Attendance, Away..Total.Games)
+
+## Removes the commas in the numerical values
+combined_nba$Home..Total.Attendance <- as.numeric(gsub(",", "", combined_nba$Home..Total.Attendance, fixed = TRUE))
+combined_nba$Away..Total.Attendance <- as.numeric(gsub(",", "", combined_nba$Away..Total.Attendance, fixed = TRUE))
+
+summary <- combined_nba %>% summarize(Number.Allstars = n_distinct(Player), Mean.HomeAttendance = mean(Home..Total.Attendance), Median.HomeAttendance = median(Home..Total.Attendance), Min.HomeAttendance = min(Home..Total.Attendance), Max.HomeAttendance = max(Home..Total.Attendance)) 
+head(summary) %>% kbl() %>% kable_styling
+
+stacked_teams <- combined_nba %>% filter(n_distinct(Player)>=2) %>% select(Team, Year, Home..Total.Attendance) %>% arrange(desc(Home..Total.Attendance))
+head(stacked_teams) %>% kbl() %>% kable_styling
+
+combined_nba <- combined_nba %>% mutate(Attendance.perHomeGame = Home..Total.Attendance/Home..Total.Games) %>% arrange(-Attendance.perHomeGame)
+head(combined_nba) %>% kbl() %>% kable_styling()
+
+Mean_Sd <- combined_nba %>% group_by(Team, Year) %>% summarize(Home.meanAttendance = mean(Home..Total.Attendance), Home.sdAttendance = sd(Home..Total.Attendance), Away.meanAttendance = mean(Away..Total.Attendance), Away.sdAttendance = sd(Away..Total.Attendance)) 
+head(Mean_Sd) %>% kbl() %>% kable_styling()
+
+Min_Max_Median <- combined_nba %>% group_by(Team, Year) %>% summarize(Home.minAttendance = min(Home..Total.Attendance), Home.maxAttendance = max(Home..Total.Attendance), Home.medianAttendance = median(Home..Total.Attendance), Away.minAttendance = min(Away..Total.Attendance), Away.maxAttendance = max(Away..Total.Attendance), Away.medianAttendance = median(Away..Total.Attendance))
+head(Min_Max_Median) %>% kbl %>% kable_styling()
+
+Quant <- combined_nba %>% group_by(Team, Year) %>% summarize(Home.QuantileAtt = quantile(Home..Total.Attendance), Away.QuantileAtt = quantile(Away..Total.Attendance)) 
+head(Quant) %>% kbl %>% kable_styling()
+
+```
+
+For the whole `combined_nba` dataset, the total number of All-Stars selections from 2000-2015 was 115, the mean home attendance was 734,951, the median home attendance was 744,961, the minimum home attendance was 460,719, and the maximum home attendance was 913,175. Teams with at least 2 All-Stars are shown under the `stacked_teams` dataset, which displays greater home attendance than the mean. Furthermore, I used *mutate* to create a variable called *Attendance.perHomeGame* which divides the total home attendance for each team by the number of home games during the season. 
+
+In the next few datasets, I grouped `combined_nba` by Team and Year to determine some summary statistics of game attendance for specific teams in each seasons for home and away games. In `Mean_Sd`, I summarized the mean and standard deviation of game attendance for each team each year. In `Min_Max_Median`, I summarized the minimum, median, and maximum game attendance for each team each year. In `Quant`, the quantile of game attendance is illustrated for each team each year.
+
+
+###Visualizing
+
+```{r}
+combined_nba %>% select(-Player, -Team) %>%
+  cor%>%as.data.frame%>%
+  rownames_to_column%>%pivot_longer(-1)%>%
+  ggplot(aes(rowname,name,fill=value))+geom_tile()+
+  geom_text(aes(label=round(value,2)))+
+  xlab("")+ylab("")+coord_fixed()+
+  scale_fill_gradient2(low="red",mid="white",high="blue")
+```
+
+There are no strong correlations illustrated by the correlation heatmap. A medium strength correlation of 0.4 occurs between the total home attendance and total away attendance. I expected this moderate correlation between the two variables because teams that have large numbers of zealous fans at home games would likely experience more fan attendance in road games as well. 
+
+
+```{r}
+ggplot(data = combined_nba, aes(x=Home..Total.Attendance, y=Away..Total.Attendance, color=Team)) + geom_point() + scale_y_continuous(breaks=seq(16000,20000,1000)) + xlab("Total Home Attendance") + ylab("Total Away Attendance") + ggtitle("NBA Game Attendance, 2000-2015") + theme(plot.title = element_text(size = 15, color = "turquoise", face="bold"))
+```
+
+The scatterplot demonstrates a moderately positive association between total home attendance and total away attendance. This positive association can be seen across numerous teams, suggesting that there is a relation betweee home and away game attendance across the NBA. I predicted this association because fans of huge basketball cities like LA, Boston, and Chicago will naturally have higher turnout in home and away games for the Lakers, Celtics, and Bulls, respectively. The All-Stars in these 3 popular teams, along with many other teams, not only excite home audiences but also entice many supporters and opponents in as the visiting team in other cities.
+
+
+```{r}
+ggplot(data=combined_nba, aes(x=Year, y=Attendance.perHomeGame, fill=Team)) + facet_wrap(~Team) + geom_bar(stat = "summary", fun=mean, na.rm = T) + ylab("Average Fan Attendance per Home Game") + ggtitle("Home Game Attendance for NBA Teams") + theme(plot.title = element_text(size = 15, color = "Orange", face="bold")) + scale_color_continuous()
+```
+
+The faceted barplot above illustrates the mean attendance per home game from 2000-2015 and is faceted by NBA team. As a basketball fan, these results make sense because consistently good teams like the Spurs and the Lakers will draw large home crowds, as exhibited by their plateau graphs. Teams like the Rockets and Thunder acquired several star players during the early 2010s, which supports their increase in home game attendance over time as their performance improved and their All-Stars captivated crowds. The discontinuation of game attendance for the Hornets and the sudden appearance of fans for the Pelicans between 2010-2015 can be explained by the fact that the New Orleans Hornets changed their team name to the Pelicans in 2013. Such organizational changes are applicable to other teams too. 
+
+
+###Dimensionality Reduction
+
+```{r}
+nba1<- combined_nba %>% select(-1,-Player, -Team)
+nba_nums<-nba1 %>% select_if(is.numeric) %>% scale
+rownames(nba_nums)<-nba1$Name
+nba_pca<-princomp(nba_nums)
+names(nba_pca)
+summary(nba_pca, loadings=T)
+```
+
+The code above cleans the data and selects for numeric variables only by eliminating *Player* and *Team*. The data is then normalized and scaled. The scaled data is inputted into princomp() to display the different PC values and their standard deviations, proportion of variance, and cumulative proportion.
+
+
+```{r}
+eigval<-nba_pca$sdev^2 
+varprop=round(eigval/sum(eigval), 2)
+
+ggplot() + geom_bar(aes(y=varprop, x=1:5), stat="identity") + xlab("") + geom_text(aes(x=1:5, y=varprop, label=round(varprop, 2)), vjust=1, col="white", size=5) + scale_y_continuous(breaks=seq(0, .6, .2), labels = scales::percent) +
+scale_x_continuous(breaks=1:10)
+```
+
+This code segment produces a plot of variance proportion that can be employed to decide how many PCs to keep. In this case, the cumulative proportion is 0.866 at PC2, which is greater than 80%. Therefore, I am keeping PC1 and PC2. 
+
+```{r}
+library(factoextra)
+fviz_pca_biplot(nba_pca)
+```
+
+This last code segment creates a biplot that allows us to visualize and interpret the numerical variables in relation to each other. As shown by the biplot, all variables except Home..Total.Games and Away..Total.Games extend into the 1st quadrant. This means that those Home..Total.Attendance, Away..Total.Attendance, and Attendance.perHomeGame have positive correlations for both PC1 and PC2 while Home..Total.Games and Away..Total.Games has a positive correlation for PC1 and a negative correlation for PC2. Consequently, PC1 is a general strength axis because all 5 numerical variables are positively associated. For example, as the number of fans attending home games increases, the number of fans attending away games is also expected to increase. On the other hand, PC2 is an axis of tradeoff between the variables in quadrant 1 (Home..Total.Attendance, Away..Total.Attendance, and Attendance.perHomeGame) versus those in quadrant 2 (Home..Total.Games and Away..Total.Games). For instance, as the number of total home games increases, the attendance per home game is expected to decrease.
+
+
+
+
+
+
+

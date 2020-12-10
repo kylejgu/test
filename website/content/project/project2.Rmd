@@ -1,0 +1,275 @@
+---
+title: "Project 2: Modeling, Testing, and Predicting"
+author: "Kyle Gu"
+date: "11/22/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+hook_output = knit_hooks$get('output')
+knit_hooks$set(output = function(x, options) {
+  # this hook is used only when the linewidth option is not NULL
+  if (!is.null(n <- options$linewidth)) {
+    x = knitr:::split_lines(x)
+    # any lines wider than n should be wrapped
+    if (any(nchar(x) > n)) x = strwrap(x, width = n)
+    x = paste(x, collapse = '\n')
+  }
+  hook_output(x, options)
+})
+
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE,fig.align="center",warning=FALSE,message=FALSE,fig.width=8, fig.height=5, linewidth=60)
+options(tibble.width = 100,width = 100)
+library(tidyverse)
+```
+
+
+##0. Introduction
+
+```{r}
+ratings <- read.csv("https://drive.google.com/uc?export=download&id=1k17J28AB-iPGyn3cFtbEU39r1MiPTPxJ")
+```
+
+The ratings dataset contains professor characteristics, course details, and evaluation scores for 463 courses taught during the 2000-2002 academic years at the University of Texas at Austin. There are 463 observations total, one for each course. The main variables that will be analyzed are: the age and gender of the professors, minority status (Caucasian or not), beauty (rating of professor's physical appearance averaged across 6 student panelists, mean-centered), native English speaker status (yes or no), division (upper or lower division course), tenure (whether or not the instructor is on tenure track), allstudents (number of students enrolled in the course), and course teaching evaluation score on a scale of 1 (very unsatisfactory) to 5 (excellent).
+
+##1. MANOVA
+
+```{r}
+man1 <- manova(cbind(beauty, eval)~gender, data=ratings)
+summary(man1)
+summary.aov(man1)
+pairwise.t.test(ratings$beauty, ratings$gender, p.adj="none")
+pairwise.t.test(ratings$eval, ratings$gender, p.adj="none")
+
+1-0.95^5 # probability of at least one type 1 error
+0.05/5   # bonferroni-adjusted significance level
+
+```
+
+Five tests (1 MANOVA, 2 ANOVAs, 2 t tests) were performed. The probability of at least one type I error for the unadjusted alpha level is 0.226. After adjusting the significance level to 0.01 using bonferroni correction, the differences between gender for beauty and evaluation are still significant.
+
+```{r}
+library(rstatix)
+
+group <- ratings$gender
+DVs <- ratings %>% select(beauty, eval)
+
+#Test multivariate normality for each group (null: assumption met)
+sapply(split(DVs,group), mshapiro_test)
+```
+
+The data violated the multivariate normality assumption for both genders (p<0.05). There is also a possibility of outlier values and multicollinearity among some of the variables, which MANOVAs are sensitive to.
+
+##2. Randomization Test
+
+```{r}
+ratings %>% group_by(native) %>% summarise(mean = mean(eval)) %>% summarise(diff(mean))
+
+set.seed(1234)
+rand_dist<-vector()
+
+for(i in 1:5000){
+new <- data.frame(evaluation=sample(ratings$eval), native=ratings$native)
+rand_dist[i]<-mean(new[new$native=="yes",]$eval)-
+mean(new[new$native=="no",]$eval)}
+
+mean(rand_dist>0.329 | rand_dist < -0.329)
+t.test(data=ratings, eval~native)
+```
+
+A randomization test was conducted to determine the mean difference in evaluation scores between the instructors that are native English speakers and those that are not. The null hypothesis is that there is no significant difference in mean evaluation scores across native status, and the alternative hypothesis is that the mean difference in evaluation scores across native status is not equal to 0. 
+
+The results of the permutation test and the two sample t-test (p=0.0024 and p=0.0014, respectively) indicate that the mean difference in evaluation scores is not equal to 0, which supports the alternative hypothesis. 
+
+Below is a plot that illustrates the distribution of mean differences in evaluation scores across the professors' native English speaking status. The red lines represent the test statistic, and the two-tailed p-value of 0.0024 was derived from the probability of obtaining a mean difference at least as extreme as the test statistic on either tail.
+
+```{r}
+{hist(rand_dist,main="Mean Differences in Evaluation Scores across Native Status",xlab="Difference",ylab="Frequency"); abline(v = c(-0.329,0.329),col="red")}
+```
+
+##3. Linear Regression Model
+
+```{r}
+fit <- lm(eval ~ beauty*tenure, data = ratings) # beauty was already mean-centered by the source
+summary(fit)
+```
+
+Since the beauty variable was already mean-centered by the source of the dataset, the intercept value of 4.13 represents the predicted evaluation score for a non-tenured instructor with an average beauty rating. Among non-tenured professors, for every 1-unit increase in beauty score, there is a predicted 0.118 point increase in evaluation score. Tenured professors with an average beauty score have a predicted evaluation score that is 0.169 lower than that of non-tenured professors with average beauty. The slope of beauty on evaluation score for tenured professors is 0.0176 greater than that of non-tenured professors.
+
+```{r}
+ggplot(ratings, aes(beauty, eval, group = tenure)) + geom_point(aes(color = tenure)) + geom_smooth(method="lm", se=F, aes(color = tenure)) + xlab("Beauty Rating (mean-centered)") + ylab("Evaluation Score") + theme_classic()
+
+library(sandwich); library(lmtest)
+
+resids <- fit$residuals
+fitted <- fit$fitted.values
+ggplot() + geom_point(aes(fitted,resids)) + geom_hline(yintercept=0, color='red')
+bptest(fit)
+
+ggplot() + geom_histogram(aes(resids), bins = 20)
+ks.test(resids, "pnorm", mean = 0, sd(resids))
+```
+
+The scatterplot shows a relatively linear relationship between evaluation score and beauty rating across tenure status. The residuals plot displays an even scatter with no fanning out along the line, which means that homoskedasticity was met, as supported by the bp test (p=0.553). Both the histogram and KS test (p=0.0697) prove that the normality assumption was met. 
+
+```{r}
+summary(fit)
+coeftest(fit, vcov = vcovHC(fit))[,1:4]
+```
+
+The beauty and tenure variables were significant after computing with robust SEs (p=0.0479 and p=0.00652, respectively), whereas only tenure status was significant using original SEs (p=0.00574). The R-squared value indicates that 5.17% of variability in evaluation score is explained by the overall model, and the adjusted R-squared suggests that 4.55% percent of variation in evaluation is explained by the model after penalizing for extra explanatory variables.
+
+##4. Linear Regression using Bootstrapped SEs
+
+```{r}
+set.seed(123)
+samp_distn<-replicate(5000, {
+boot_dat <- sample_frac(ratings, replace=T) 
+fit2 <- lm(eval ~ beauty*tenure, data = boot_dat) 
+coef(fit2) 
+})
+## Estimated SEs
+samp_distn %>% t %>% as.data.frame %>% summarize_all(sd)
+```
+
+By resampling observations, the bootstrapped SEs for beauty, tenure, and beauty:tenure are 0.0581, 0.0616, and 0.0681, respectively. For beauty, the bootstrapped SE is slightly lower than the original and robust SEs. For tenure, the bootstrapped SE is slightly greater than the original and robust SEs. For the interaction between beauty and tenure, the bootstrapped SE is less than the original and robust SEs. 
+
+##5. Logistic Regression Model
+
+```{r}
+ratings <- ratings %>% mutate(y=ifelse(division=="upper",1,0))
+fit3 <- glm(y ~ minority + age, data = ratings, family = "binomial")
+coeftest(fit3)
+exp(coef(fit3))
+```
+
+The intercept means that a white instructor with 0 years of age would have a predicted odds of e^-0.0642 = 0.938 in teaching an upper division course. Controlling for age, the odds of teaching upper division for minority instructors are 0.477 times that of Caucasian instructors (significant, p=0.0069). Controlling for minority status, every 1 year increase in age multiplies the odds of instructing upper division by a factor of 1.018 (not significant, p=0.0895).
+
+```{r}
+ratings$probs <- predict(fit3, type = "response")
+ratings <- ratings %>% mutate(prob=ifelse(probs>0.5,1,0))
+table(prediction=ratings$prob, truth=ratings$y) %>% addmargins()
+
+(6+291)/463 # accuracy
+291/306     # sensitivity (TPR)
+6/157       # specificity (TNR)
+291/442     # precision (PPV)
+```
+
+The accuracy is 0.641, the sensitivity is 0.951, the specificity is 0.038, and the precision is 0.658. 
+
+```{r}
+library(plotROC)
+ROCplot<-ggplot(ratings)+geom_roc(aes(d=y,m=probs), n.cuts=0)
+ROCplot
+calc_auc(ROCplot)
+```
+
+The AUC is 0.599, which indicates bad quality. Consequently, it is difficult to predict division based on just minority status and age.
+
+```{r}
+ratings$logit<-predict(fit3, type="link")
+ratings %>% ggplot()+geom_density(aes(logit,color=division,fill=division), alpha=.4)+
+  theme(legend.position=c(.85,.85))+geom_vline(xintercept=0)+xlab("logit (log-odds)")+
+  geom_rug(aes(logit,color=division))
+```
+
+##6. Logistic Regression using all variables
+
+```{r}
+class_diag <- function(probs,truth){
+  #CONFUSION MATRIX: CALCULATE ACCURACY, TPR, TNR, PPV
+  tab<-table(factor(probs>.5,levels=c("FALSE","TRUE")),truth)
+  acc=sum(diag(tab))/sum(tab)
+  sens=tab[2,2]/colSums(tab)[2]
+  spec=tab[1,1]/colSums(tab)[1]
+  ppv=tab[2,2]/rowSums(tab)[2]
+  f1=2*(sens*ppv)/(sens+ppv)
+
+  if(is.numeric(truth)==FALSE & is.logical(truth)==FALSE) truth<-as.numeric(truth)-1
+  
+  #CALCULATE EXACT AUC
+  ord<-order(probs, decreasing=TRUE)
+  probs <- probs[ord]; truth <- truth[ord]
+  
+  TPR=cumsum(truth)/max(1,sum(truth)) 
+  FPR=cumsum(!truth)/max(1,sum(!truth))
+  
+  dup<-c(probs[-1]>=probs[-length(probs)], FALSE)
+  TPR<-c(0,TPR[!dup],1); FPR<-c(0,FPR[!dup],1)
+  n <- length(TPR)
+  auc<- sum( ((TPR[-1]+TPR[-n])/2) * (FPR[-1]-FPR[-n]) )
+
+  data.frame(acc,sens,spec,ppv,f1,auc)
+}
+```
+
+```{r}
+fit4 <- glm(y~minority+age+gender+credits+beauty+eval+native+allstudents, data = ratings, family = "binomial")
+coeftest(fit4)
+prob1 <- predict(fit4, type = "response")
+class_diag(prob1, ratings$y)
+```
+
+The accuracy is 0.737, the sensitivity is 0.948, the specificity is 0.325, the precision is 0.732, and the AUC is 0.731. The AUC value suggests that the model is fair. 
+
+```{r}
+set.seed(1234)
+k=10 
+
+data<-ratings[sample(nrow(ratings)),] 
+folds<-cut(seq(1:nrow(ratings)),breaks=k,labels=F) 
+
+diags<-NULL
+for(i in 1:k){
+  train<-data[folds!=i,]
+  test<-data[folds==i,]
+  truth<-test$y 
+  fitty<-glm(y ~ minority + age + gender + credits + beauty + eval + native + allstudents,data=train,family="binomial")
+  probs<-predict(fitty,newdata = test,type="response")
+  diags<-rbind(diags,class_diag(probs,truth))
+}
+summarize_all(diags,mean) 
+```
+
+The out-of-sample class diagnostics were similar in value to the in-sample ones. The accuracy is 0.728, the sensitivity is 0.930, the specificity is 0.340, the precision is 0.732, and the AUC is 0.695.The out-of-sample AUC is lower than that of the in-sample, 0.731, which means that the quality decreased from fair to bad.
+
+```{r}
+library(glmnet)
+y<-as.matrix(ratings$y) 
+x<-model.matrix(y~minority+age+gender+credits+beauty+eval+native+allstudents,data=ratings)[,-1]
+x <- scale(x)
+
+cv<-cv.glmnet(x,y,family="binomial")
+lasso<-glmnet(x,y,family="binomial",lambda=cv$lambda.1se)
+coef(lasso)
+```
+
+LASSO retained the following variables: minority, age, credits, native, and allstudents. 
+
+```{r}
+set.seed(1234)
+k=10
+data <- ratings %>% sample_frac
+folds <- ntile(1:nrow(data),n=10) 
+diags<-NULL
+for(i in 1:k){
+train <- data[folds!=i,] 
+test <- data[folds==i,] 
+truth <- test$y 
+fit5 <- glm(y~minority+age+credits+native+allstudents,
+data=train, family="binomial")
+probs <- predict(fit5, newdata=test, type="response")
+diags<-rbind(diags,class_diag(probs,truth))
+}
+diags%>%summarize_all(mean)
+```
+
+Using only the variables selected by LASSO, the out-of-sample AUC turned out to be 0.706. This AUC is greater than that of the original 10-fold CV, 0.695, and lower than the in-sample AUC, 0.731. The descending order of quality according to the AUC goes: in-sample, 10-fold CV using LASSO-selected variables, and original 10-fold CV. 
+
+
+
+
+

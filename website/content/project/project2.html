@@ -1,0 +1,372 @@
+---
+title: "Project 2: Modeling, Testing, and Predicting"
+author: "Kyle Gu"
+date: "11/22/2020"
+output: html_document
+---
+
+
+
+<div id="introduction" class="section level2">
+<h2>0. Introduction</h2>
+<pre class="r"><code>ratings &lt;- read.csv(&quot;https://drive.google.com/uc?export=download&amp;id=1k17J28AB-iPGyn3cFtbEU39r1MiPTPxJ&quot;)</code></pre>
+<p>The ratings dataset contains professor characteristics, course details, and evaluation scores for 463 courses taught during the 2000-2002 academic years at the University of Texas at Austin. There are 463 observations total, one for each course. The main variables that will be analyzed are: the age and gender of the professors, minority status (Caucasian or not), beauty (rating of professor's physical appearance averaged across 6 student panelists, mean-centered), native English speaker status (yes or no), division (upper or lower division course), tenure (whether or not the instructor is on tenure track), allstudents (number of students enrolled in the course), and course teaching evaluation score on a scale of 1 (very unsatisfactory) to 5 (excellent).</p>
+</div>
+<div id="manova" class="section level2">
+<h2>1. MANOVA</h2>
+<pre class="r"><code>man1 &lt;- manova(cbind(beauty, eval)~gender, data=ratings)
+summary(man1)</code></pre>
+<pre><code>## Df Pillai approx F num Df den Df Pr(&gt;F)
+## gender 1 0.046997 11.342 2 460 1.555e-05 ***
+## Residuals 461
+## ---
+## Signif. codes: 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1
+&#39; &#39; 1</code></pre>
+<pre class="r"><code>summary.aov(man1)</code></pre>
+<pre><code>## Response beauty :
+## Df Sum Sq Mean Sq F value Pr(&gt;F)
+## gender 1 4.542 4.5416 7.4033 0.006757 **
+## Residuals 461 282.806 0.6135
+## ---
+## Signif. codes: 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1
+&#39; &#39; 1
+##
+## Response eval :
+## Df Sum Sq Mean Sq F value Pr(&gt;F)
+## gender 1 3.186 3.1859 10.562 0.001239 **
+## Residuals 461 139.053 0.3016
+## ---
+## Signif. codes: 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1
+&#39; &#39; 1</code></pre>
+<pre class="r"><code>pairwise.t.test(ratings$beauty, ratings$gender, p.adj=&quot;none&quot;)</code></pre>
+<pre><code>## 
+##  Pairwise comparisons using t tests with pooled SD 
+## 
+## data:  ratings$beauty and ratings$gender 
+## 
+##      female
+## male 0.0068
+## 
+## P value adjustment method: none</code></pre>
+<pre class="r"><code>pairwise.t.test(ratings$eval, ratings$gender, p.adj=&quot;none&quot;)</code></pre>
+<pre><code>## 
+##  Pairwise comparisons using t tests with pooled SD 
+## 
+## data:  ratings$eval and ratings$gender 
+## 
+##      female
+## male 0.0012
+## 
+## P value adjustment method: none</code></pre>
+<pre class="r"><code>1-0.95^5 # probability of at least one type 1 error</code></pre>
+<pre><code>## [1] 0.2262191</code></pre>
+<pre class="r"><code>0.05/5   # bonferroni-adjusted significance level</code></pre>
+<pre><code>## [1] 0.01</code></pre>
+<p>Five tests (1 MANOVA, 2 ANOVAs, 2 t tests) were performed. The probability of at least one type I error for the unadjusted alpha level is 0.226. After adjusting the significance level to 0.01 using bonferroni correction, the differences between gender for beauty and evaluation are still significant.</p>
+<pre class="r"><code>library(rstatix)
+
+group &lt;- ratings$gender
+DVs &lt;- ratings %&gt;% select(beauty, eval)
+
+#Test multivariate normality for each group (null: assumption met)
+sapply(split(DVs,group), mshapiro_test)</code></pre>
+<pre><code>##           female      male        
+## statistic 0.9804633   0.9711292   
+## p.value   0.008030547 3.061319e-05</code></pre>
+<p>The data violated the multivariate normality assumption for both genders (p&lt;0.05). There is also a possibility of outlier values and multicollinearity among some of the variables, which MANOVAs are sensitive to.</p>
+</div>
+<div id="randomization-test" class="section level2">
+<h2>2. Randomization Test</h2>
+<pre class="r"><code>ratings %&gt;% group_by(native) %&gt;% summarise(mean = mean(eval)) %&gt;% summarise(diff(mean))</code></pre>
+<pre><code>## # A tibble: 1 x 1
+##   `diff(mean)`
+##          &lt;dbl&gt;
+## 1        0.329</code></pre>
+<pre class="r"><code>set.seed(1234)
+rand_dist&lt;-vector()
+
+for(i in 1:5000){
+new &lt;- data.frame(evaluation=sample(ratings$eval), native=ratings$native)
+rand_dist[i]&lt;-mean(new[new$native==&quot;yes&quot;,]$eval)-
+mean(new[new$native==&quot;no&quot;,]$eval)}
+
+mean(rand_dist&gt;0.329 | rand_dist &lt; -0.329)</code></pre>
+<pre><code>## [1] 0.0024</code></pre>
+<pre class="r"><code>t.test(data=ratings, eval~native)</code></pre>
+<pre><code>##
+## Welch Two Sample t-test
+##
+## data: eval by native
+## t = -3.5091, df = 31.911, p-value = 0.001362
+## alternative hypothesis: true difference in means is not
+equal to 0
+## 95 percent confidence interval:
+## -0.5198011 -0.1379493
+## sample estimates:
+## mean in group no mean in group yes
+## 3.689286 4.018161</code></pre>
+<p>A randomization test was conducted to determine the mean difference in evaluation scores between the instructors that are native English speakers and those that are not. The null hypothesis is that there is no significant difference in mean evaluation scores across native status, and the alternative hypothesis is that the mean difference in evaluation scores across native status is not equal to 0.</p>
+<p>The results of the permutation test and the two sample t-test (p=0.0024 and p=0.0014, respectively) indicate that the mean difference in evaluation scores is not equal to 0, which supports the alternative hypothesis.</p>
+<p>Below is a plot that illustrates the distribution of mean differences in evaluation scores across the professors' native English speaking status. The red lines represent the test statistic, and the two-tailed p-value of 0.0024 was derived from the probability of obtaining a mean difference at least as extreme as the test statistic on either tail.</p>
+<pre class="r"><code>{hist(rand_dist,main=&quot;Mean Differences in Evaluation Scores across Native Status&quot;,xlab=&quot;Difference&quot;,ylab=&quot;Frequency&quot;); abline(v = c(-0.329,0.329),col=&quot;red&quot;)}</code></pre>
+<p><img src="/project/project2_files/figure-html/unnamed-chunk-5-1.png" width="768" style="display: block; margin: auto;" /></p>
+</div>
+<div id="linear-regression-model" class="section level2">
+<h2>3. Linear Regression Model</h2>
+<pre class="r"><code>fit &lt;- lm(eval ~ beauty*tenure, data = ratings) # beauty was already mean-centered by the source
+summary(fit)</code></pre>
+<pre><code>##
+## Call:
+## lm(formula = eval ~ beauty * tenure, data = ratings)
+##
+## Residuals:
+## Min 1Q Median 3Q Max
+## -1.76082 -0.35517 0.05594 0.40546 1.14314
+##
+## Coefficients:
+## Estimate Std. Error t value Pr(&gt;|t|)
+## (Intercept) 4.12997 0.05370 76.904 &lt; 2e-16 ***
+## beauty 0.11846 0.06153 1.925 0.05481 .
+## tenureyes -0.16877 0.06081 -2.775 0.00574 **
+## beauty:tenureyes 0.01760 0.07203 0.244 0.80704
+## ---
+## Signif. codes: 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1
+&#39; &#39; 1
+##
+## Residual standard error: 0.5421 on 459 degrees of
+freedom
+## Multiple R-squared: 0.05172, Adjusted R-squared: 0.04552
+## F-statistic: 8.344 on 3 and 459 DF, p-value: 2.06e-05</code></pre>
+<p>Since the beauty variable was already mean-centered by the source of the dataset, the intercept value of 4.13 represents the predicted evaluation score for a non-tenured instructor with an average beauty rating. Among non-tenured professors, for every 1-unit increase in beauty score, there is a predicted 0.118 point increase in evaluation score. Tenured professors with an average beauty score have a predicted evaluation score that is 0.169 lower than that of non-tenured professors with average beauty. The slope of beauty on evaluation score for tenured professors is 0.0176 greater than that of non-tenured professors.</p>
+<pre class="r"><code>ggplot(ratings, aes(beauty, eval, group = tenure)) + geom_point(aes(color = tenure)) + geom_smooth(method=&quot;lm&quot;, se=F, aes(color = tenure)) + xlab(&quot;Beauty Rating (mean-centered)&quot;) + ylab(&quot;Evaluation Score&quot;) + theme_classic()</code></pre>
+<p><img src="/project/project2_files/figure-html/unnamed-chunk-7-1.png" width="768" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>library(sandwich); library(lmtest)
+
+resids &lt;- fit$residuals
+fitted &lt;- fit$fitted.values
+ggplot() + geom_point(aes(fitted,resids)) + geom_hline(yintercept=0, color=&#39;red&#39;)</code></pre>
+<p><img src="/project/project2_files/figure-html/unnamed-chunk-7-2.png" width="768" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>bptest(fit)</code></pre>
+<pre><code>## 
+##  studentized Breusch-Pagan test
+## 
+## data:  fit
+## BP = 2.0961, df = 3, p-value = 0.5527</code></pre>
+<pre class="r"><code>ggplot() + geom_histogram(aes(resids), bins = 20)</code></pre>
+<p><img src="/project/project2_files/figure-html/unnamed-chunk-7-3.png" width="768" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>ks.test(resids, &quot;pnorm&quot;, mean = 0, sd(resids))</code></pre>
+<pre><code>## 
+##  One-sample Kolmogorov-Smirnov test
+## 
+## data:  resids
+## D = 0.060203, p-value = 0.06973
+## alternative hypothesis: two-sided</code></pre>
+<p>The scatterplot shows a relatively linear relationship between evaluation score and beauty rating across tenure status. The residuals plot displays an even scatter with no fanning out along the line, which means that homoskedasticity was met, as supported by the bp test (p=0.553). Both the histogram and KS test (p=0.0697) prove that the normality assumption was met.</p>
+<pre class="r"><code>summary(fit)</code></pre>
+<pre><code>##
+## Call:
+## lm(formula = eval ~ beauty * tenure, data = ratings)
+##
+## Residuals:
+## Min 1Q Median 3Q Max
+## -1.76082 -0.35517 0.05594 0.40546 1.14314
+##
+## Coefficients:
+## Estimate Std. Error t value Pr(&gt;|t|)
+## (Intercept) 4.12997 0.05370 76.904 &lt; 2e-16 ***
+## beauty 0.11846 0.06153 1.925 0.05481 .
+## tenureyes -0.16877 0.06081 -2.775 0.00574 **
+## beauty:tenureyes 0.01760 0.07203 0.244 0.80704
+## ---
+## Signif. codes: 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1
+&#39; &#39; 1
+##
+## Residual standard error: 0.5421 on 459 degrees of
+freedom
+## Multiple R-squared: 0.05172, Adjusted R-squared: 0.04552
+## F-statistic: 8.344 on 3 and 459 DF, p-value: 2.06e-05</code></pre>
+<pre class="r"><code>coeftest(fit, vcov = vcovHC(fit))[,1:4]</code></pre>
+<pre><code>## Estimate Std. Error t value Pr(&gt;|t|)
+## (Intercept) 4.12997391 0.05479946 75.3652314
+1.277998e-260
+## beauty 0.11846013 0.05971570 1.9837350 4.788070e-02
+## tenureyes -0.16877287 0.06175401 -2.7329863 6.518627e-03
+## beauty:tenureyes 0.01760225 0.07051092 0.2496386
+8.029785e-01</code></pre>
+<p>The beauty and tenure variables were significant after computing with robust SEs (p=0.0479 and p=0.00652, respectively), whereas only tenure status was significant using original SEs (p=0.00574). The R-squared value indicates that 5.17% of variability in evaluation score is explained by the overall model, and the adjusted R-squared suggests that 4.55% percent of variation in evaluation is explained by the model after penalizing for extra explanatory variables.</p>
+</div>
+<div id="linear-regression-using-bootstrapped-ses" class="section level2">
+<h2>4. Linear Regression using Bootstrapped SEs</h2>
+<pre class="r"><code>set.seed(123)
+samp_distn&lt;-replicate(5000, {
+boot_dat &lt;- sample_frac(ratings, replace=T) 
+fit2 &lt;- lm(eval ~ beauty*tenure, data = boot_dat) 
+coef(fit2) 
+})
+## Estimated SEs
+samp_distn %&gt;% t %&gt;% as.data.frame %&gt;% summarize_all(sd)</code></pre>
+<pre><code>##   (Intercept)     beauty  tenureyes beauty:tenureyes
+## 1  0.05429307 0.05814674 0.06160705       0.06814221</code></pre>
+<p>By resampling observations, the bootstrapped SEs for beauty, tenure, and beauty:tenure are 0.0581, 0.0616, and 0.0681, respectively. For beauty, the bootstrapped SE is slightly lower than the original and robust SEs. For tenure, the bootstrapped SE is slightly greater than the original and robust SEs. For the interaction between beauty and tenure, the bootstrapped SE is less than the original and robust SEs.</p>
+</div>
+<div id="logistic-regression-model" class="section level2">
+<h2>5. Logistic Regression Model</h2>
+<pre class="r"><code>ratings &lt;- ratings %&gt;% mutate(y=ifelse(division==&quot;upper&quot;,1,0))
+fit3 &lt;- glm(y ~ minority + age, data = ratings, family = &quot;binomial&quot;)
+coeftest(fit3)</code></pre>
+<pre><code>##
+## z test of coefficients:
+##
+## Estimate Std. Error z value Pr(&gt;|z|)
+## (Intercept) -0.064185 0.508163 -0.1263 0.899489
+## minorityyes -0.739579 0.273734 -2.7018 0.006896 **
+## age 0.017531 0.010324 1.6980 0.089499 .
+## ---
+## Signif. codes: 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1
+&#39; &#39; 1</code></pre>
+<pre class="r"><code>exp(coef(fit3))</code></pre>
+<pre><code>## (Intercept) minorityyes         age 
+##   0.9378318   0.4773149   1.0176855</code></pre>
+<p>The intercept means that a white instructor with 0 years of age would have a predicted odds of e^-0.0642 = 0.938 in teaching an upper division course. Controlling for age, the odds of teaching upper division for minority instructors are 0.477 times that of Caucasian instructors (significant, p=0.0069). Controlling for minority status, every 1 year increase in age multiplies the odds of instructing upper division by a factor of 1.018 (not significant, p=0.0895).</p>
+<pre class="r"><code>ratings$probs &lt;- predict(fit3, type = &quot;response&quot;)
+ratings &lt;- ratings %&gt;% mutate(prob=ifelse(probs&gt;0.5,1,0))
+table(prediction=ratings$prob, truth=ratings$y) %&gt;% addmargins()</code></pre>
+<pre><code>##           truth
+## prediction   0   1 Sum
+##        0     6  15  21
+##        1   151 291 442
+##        Sum 157 306 463</code></pre>
+<pre class="r"><code>(6+291)/463 # accuracy</code></pre>
+<pre><code>## [1] 0.6414687</code></pre>
+<pre class="r"><code>291/306     # sensitivity (TPR)</code></pre>
+<pre><code>## [1] 0.9509804</code></pre>
+<pre class="r"><code>6/157       # specificity (TNR)</code></pre>
+<pre><code>## [1] 0.03821656</code></pre>
+<pre class="r"><code>291/442     # precision (PPV)</code></pre>
+<pre><code>## [1] 0.658371</code></pre>
+<p>The accuracy is 0.641, the sensitivity is 0.951, the specificity is 0.038, and the precision is 0.658.</p>
+<pre class="r"><code>library(plotROC)
+ROCplot&lt;-ggplot(ratings)+geom_roc(aes(d=y,m=probs), n.cuts=0)
+ROCplot</code></pre>
+<p><img src="/project/project2_files/figure-html/unnamed-chunk-12-1.png" width="768" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>calc_auc(ROCplot)</code></pre>
+<pre><code>##   PANEL group       AUC
+## 1     1    -1 0.5986533</code></pre>
+<p>The AUC is 0.599, which indicates bad quality. Consequently, it is difficult to predict division based on just minority status and age.</p>
+<pre class="r"><code>ratings$logit&lt;-predict(fit3, type=&quot;link&quot;)
+ratings %&gt;% ggplot()+geom_density(aes(logit,color=division,fill=division), alpha=.4)+
+  theme(legend.position=c(.85,.85))+geom_vline(xintercept=0)+xlab(&quot;logit (log-odds)&quot;)+
+  geom_rug(aes(logit,color=division))</code></pre>
+<p><img src="/project/project2_files/figure-html/unnamed-chunk-13-1.png" width="768" style="display: block; margin: auto;" /></p>
+</div>
+<div id="logistic-regression-using-all-variables" class="section level2">
+<h2>6. Logistic Regression using all variables</h2>
+<pre class="r"><code>class_diag &lt;- function(probs,truth){
+  #CONFUSION MATRIX: CALCULATE ACCURACY, TPR, TNR, PPV
+  tab&lt;-table(factor(probs&gt;.5,levels=c(&quot;FALSE&quot;,&quot;TRUE&quot;)),truth)
+  acc=sum(diag(tab))/sum(tab)
+  sens=tab[2,2]/colSums(tab)[2]
+  spec=tab[1,1]/colSums(tab)[1]
+  ppv=tab[2,2]/rowSums(tab)[2]
+  f1=2*(sens*ppv)/(sens+ppv)
+
+  if(is.numeric(truth)==FALSE &amp; is.logical(truth)==FALSE) truth&lt;-as.numeric(truth)-1
+  
+  #CALCULATE EXACT AUC
+  ord&lt;-order(probs, decreasing=TRUE)
+  probs &lt;- probs[ord]; truth &lt;- truth[ord]
+  
+  TPR=cumsum(truth)/max(1,sum(truth)) 
+  FPR=cumsum(!truth)/max(1,sum(!truth))
+  
+  dup&lt;-c(probs[-1]&gt;=probs[-length(probs)], FALSE)
+  TPR&lt;-c(0,TPR[!dup],1); FPR&lt;-c(0,FPR[!dup],1)
+  n &lt;- length(TPR)
+  auc&lt;- sum( ((TPR[-1]+TPR[-n])/2) * (FPR[-1]-FPR[-n]) )
+
+  data.frame(acc,sens,spec,ppv,f1,auc)
+}</code></pre>
+<pre class="r"><code>fit4 &lt;- glm(y~minority+age+gender+credits+beauty+eval+native+allstudents, data = ratings, family = &quot;binomial&quot;)
+coeftest(fit4)</code></pre>
+<pre><code>##
+## z test of coefficients:
+##
+## Estimate Std. Error z value Pr(&gt;|z|)
+## (Intercept) 3.7077957 1.3838677 2.6793 0.007378 **
+## minorityyes -1.0917624 0.3647732 -2.9930 0.002763 **
+## age 0.0213497 0.0122041 1.7494 0.080226 .
+## gendermale -0.3393205 0.2466638 -1.3756 0.168933
+## creditssingle -4.1586937 1.0595901 -3.9248 8.680e-05 ***
+## beauty -0.0248908 0.1461437 -0.1703 0.864760
+## eval -0.1245370 0.2211816 -0.5631 0.573399
+## nativeyes -2.7149329 0.9352502 -2.9029 0.003697 **
+## allstudents -0.0073711 0.0017635 -4.1797 2.918e-05 ***
+## ---
+## Signif. codes: 0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1
+&#39; &#39; 1</code></pre>
+<pre class="r"><code>prob1 &lt;- predict(fit4, type = &quot;response&quot;)
+class_diag(prob1, ratings$y)</code></pre>
+<pre><code>## acc sens spec ppv f1 auc
+## 1 0.7365011 0.9477124 0.3248408 0.7323232 0.8262108
+0.7314017</code></pre>
+<p>The accuracy is 0.737, the sensitivity is 0.948, the specificity is 0.325, the precision is 0.732, and the AUC is 0.731. The AUC value suggests that the model is fair.</p>
+<pre class="r"><code>set.seed(1234)
+k=10 
+
+data&lt;-ratings[sample(nrow(ratings)),] 
+folds&lt;-cut(seq(1:nrow(ratings)),breaks=k,labels=F) 
+
+diags&lt;-NULL
+for(i in 1:k){
+  train&lt;-data[folds!=i,]
+  test&lt;-data[folds==i,]
+  truth&lt;-test$y 
+  fitty&lt;-glm(y ~ minority + age + gender + credits + beauty + eval + native + allstudents,data=train,family=&quot;binomial&quot;)
+  probs&lt;-predict(fitty,newdata = test,type=&quot;response&quot;)
+  diags&lt;-rbind(diags,class_diag(probs,truth))
+}
+summarize_all(diags,mean) </code></pre>
+<pre><code>## acc sens spec ppv f1 auc
+## 1 0.7277521 0.9300977 0.3396394 0.732421 0.8177128
+0.6948268</code></pre>
+<p>The out-of-sample class diagnostics were similar in value to the in-sample ones. The accuracy is 0.728, the sensitivity is 0.930, the specificity is 0.340, the precision is 0.732, and the AUC is 0.695.The out-of-sample AUC is lower than that of the in-sample, 0.731, which means that the quality decreased from fair to bad.</p>
+<pre class="r"><code>library(glmnet)
+y&lt;-as.matrix(ratings$y) 
+x&lt;-model.matrix(y~minority+age+gender+credits+beauty+eval+native+allstudents,data=ratings)[,-1]
+x &lt;- scale(x)
+
+cv&lt;-cv.glmnet(x,y,family=&quot;binomial&quot;)
+lasso&lt;-glmnet(x,y,family=&quot;binomial&quot;,lambda=cv$lambda.1se)
+coef(lasso)</code></pre>
+<pre><code>## 9 x 1 sparse Matrix of class &quot;dgCMatrix&quot;
+##                        s0
+## (Intercept)    0.68329240
+## minorityyes   -0.08885712
+## age            0.02791385
+## gendermale     .         
+## creditssingle -0.58579683
+## beauty         .         
+## eval           .         
+## nativeyes     -0.17766129
+## allstudents   -0.34440122</code></pre>
+<p>LASSO retained the following variables: minority, age, credits, native, and allstudents.</p>
+<pre class="r"><code>set.seed(1234)
+k=10
+data &lt;- ratings %&gt;% sample_frac
+folds &lt;- ntile(1:nrow(data),n=10) 
+diags&lt;-NULL
+for(i in 1:k){
+train &lt;- data[folds!=i,] 
+test &lt;- data[folds==i,] 
+truth &lt;- test$y 
+fit5 &lt;- glm(y~minority+age+credits+native+allstudents,
+data=train, family=&quot;binomial&quot;)
+probs &lt;- predict(fit5, newdata=test, type=&quot;response&quot;)
+diags&lt;-rbind(diags,class_diag(probs,truth))
+}
+diags%&gt;%summarize_all(mean)</code></pre>
+<pre><code>## acc sens spec ppv f1 auc
+## 1 0.7279833 0.945598 0.3081618 0.7271087 0.8204621
+0.7060798</code></pre>
+<p>Using only the variables selected by LASSO, the out-of-sample AUC turned out to be 0.706. This AUC is greater than that of the original 10-fold CV, 0.695, and lower than the in-sample AUC, 0.731. The descending order of quality according to the AUC goes: in-sample, 10-fold CV using LASSO-selected variables, and original 10-fold CV.</p>
+</div>

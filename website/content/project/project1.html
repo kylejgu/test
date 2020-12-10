@@ -1,0 +1,1315 @@
+---
+title: "Project 1: Exploratory Data Analysis"
+author: "Kyle Gu"
+date: "10/8/2020"
+output: html_document
+---
+
+<script src="/rmarkdown-libs/kePrint/kePrint.js"></script>
+<link href="/rmarkdown-libs/lightable/lightable.css" rel="stylesheet" />
+
+
+<pre class="r"><code>library(tidyverse)
+library(&quot;kableExtra&quot;)
+nba_allstar &lt;- read.csv(&quot;https://drive.google.com/uc?export=download&amp;id=1adb3W6h8KQRkLQ_X4Z39cG-zQtnuEiDy&quot;)
+nba_attendance &lt;- read.csv(&quot;https://drive.google.com/uc?export=download&amp;id=1ko3v_rGutSHIhPC_yXoSNOMkR7EaAEBg&quot;)</code></pre>
+<div id="introduction" class="section level3">
+<h3>Introduction</h3>
+<p>I selected two datasets from data.world: one for NBA All-Star player selections and another for NBA game attendance. The <code>nba_allstar</code> dataset contains the variables: year, player, player metrics (position, height, weight), team, conference, draft status, and nationalty. The <code>nba_attendance</code> dataset contains the variables: year, rank, team, and a variety of attendance variables for home and away games. All data were derived from the NBA's official records and basketball-reference.com.</p>
+<p>Since childhood, I spent much of my leisure time playing and watching basketball. I had the privilege of attending many Houston Rockets' games and marveled at the effect of crowd intensity each game. The crowd served as a huge momentum boost for the Rockets, especially when star players made great plays. This observation inspired the project because I wanted to analyze if and how the presence of All-Star players affected game attendance. I expect to find a positive association between the number of All-Star players and the quantity of fan attendance.</p>
+</div>
+<div id="joiningmerging" class="section level3">
+<h3>Joining/Merging</h3>
+<pre class="r"><code>combined_nba &lt;- left_join(nba_allstar, nba_attendance, by = &quot;Team&quot;)
+combined_nba &lt;- combined_nba[which(combined_nba$Year == combined_nba$Starting.Year), 
+    ]
+
+head(combined_nba) %&gt;% kbl() %&gt;% kable_material(c(&quot;striped&quot;, 
+    &quot;hover&quot;))</code></pre>
+<table class=" lightable-material lightable-striped lightable-hover" style="font-family: &quot;Source Sans Pro&quot;, helvetica, sans-serif; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+Year
+</th>
+<th style="text-align:left;">
+Player
+</th>
+<th style="text-align:left;">
+Pos
+</th>
+<th style="text-align:left;">
+HT
+</th>
+<th style="text-align:right;">
+WT
+</th>
+<th style="text-align:left;">
+Team
+</th>
+<th style="text-align:left;">
+Selection.Type
+</th>
+<th style="text-align:left;">
+NBA.Draft.Status
+</th>
+<th style="text-align:left;">
+Nationality
+</th>
+<th style="text-align:right;">
+Starting.Year
+</th>
+<th style="text-align:right;">
+Rank
+</th>
+<th style="text-align:right;">
+Home..Total.Games
+</th>
+<th style="text-align:left;">
+Home..Total.Attendance
+</th>
+<th style="text-align:left;">
+Home..Avg.Attendance
+</th>
+<th style="text-align:left;">
+Home....Capactiy
+</th>
+<th style="text-align:right;">
+Away..Total.Games
+</th>
+<th style="text-align:left;">
+Away..Total.Attendance
+</th>
+<th style="text-align:left;">
+Away..Avg.Attendance
+</th>
+<th style="text-align:right;">
+Away....Capactiy
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+381
+</td>
+<td style="text-align:right;">
+2015
+</td>
+<td style="text-align:left;">
+LeBron James
+</td>
+<td style="text-align:left;">
+F
+</td>
+<td style="text-align:left;">
+8-Jun
+</td>
+<td style="text-align:right;">
+250
+</td>
+<td style="text-align:left;">
+Cavaliers
+</td>
+<td style="text-align:left;">
+Eastern All-Star Fan Vote Selection
+</td>
+<td style="text-align:left;">
+2003 Rnd 1 Pick 1
+</td>
+<td style="text-align:left;">
+United States
+</td>
+<td style="text-align:right;">
+2015
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:left;">
+843,042
+</td>
+<td style="text-align:left;">
+20,562
+</td>
+<td style="text-align:left;">
+100
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:left;">
+18,910
+</td>
+<td style="text-align:left;">
+98.2
+</td>
+<td style="text-align:right;">
+82
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+397
+</td>
+<td style="text-align:right;">
+2015
+</td>
+<td style="text-align:left;">
+Dwyane Wade
+</td>
+<td style="text-align:left;">
+SG
+</td>
+<td style="text-align:left;">
+4-Jun
+</td>
+<td style="text-align:right;">
+220
+</td>
+<td style="text-align:left;">
+Heat
+</td>
+<td style="text-align:left;">
+Eastern All-Star Fan Vote Selection
+</td>
+<td style="text-align:left;">
+2003 Rnd 1 Pick 5
+</td>
+<td style="text-align:left;">
+United States
+</td>
+<td style="text-align:right;">
+2015
+</td>
+<td style="text-align:right;">
+6
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:left;">
+809,350
+</td>
+<td style="text-align:left;">
+19,740
+</td>
+<td style="text-align:left;">
+100.7
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:left;">
+18,044
+</td>
+<td style="text-align:left;">
+93.9
+</td>
+<td style="text-align:right;">
+82
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+413
+</td>
+<td style="text-align:right;">
+2015
+</td>
+<td style="text-align:left;">
+Paul George
+</td>
+<td style="text-align:left;">
+GF
+</td>
+<td style="text-align:left;">
+9-Jun
+</td>
+<td style="text-align:right;">
+220
+</td>
+<td style="text-align:left;">
+Pacers
+</td>
+<td style="text-align:left;">
+Eastern All-Star Fan Vote Selection
+</td>
+<td style="text-align:left;">
+2010 Rnd 1 Pick 10
+</td>
+<td style="text-align:left;">
+United States
+</td>
+<td style="text-align:right;">
+2015
+</td>
+<td style="text-align:right;">
+21
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:left;">
+690,733
+</td>
+<td style="text-align:left;">
+16,847
+</td>
+<td style="text-align:left;">
+92.7
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:left;">
+17,851
+</td>
+<td style="text-align:left;">
+92.3
+</td>
+<td style="text-align:right;">
+82
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+429
+</td>
+<td style="text-align:right;">
+2015
+</td>
+<td style="text-align:left;">
+Carmelo Anthony
+</td>
+<td style="text-align:left;">
+F
+</td>
+<td style="text-align:left;">
+8-Jun
+</td>
+<td style="text-align:right;">
+240
+</td>
+<td style="text-align:left;">
+NY Knicks
+</td>
+<td style="text-align:left;">
+Eastern All-Star Fan Vote Selection
+</td>
+<td style="text-align:left;">
+2003 Rnd 1 Pick 3
+</td>
+<td style="text-align:left;">
+United States
+</td>
+<td style="text-align:right;">
+2015
+</td>
+<td style="text-align:right;">
+5
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:left;">
+812,292
+</td>
+<td style="text-align:left;">
+19,812
+</td>
+<td style="text-align:left;">
+100
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:left;">
+18,440
+</td>
+<td style="text-align:left;">
+96
+</td>
+<td style="text-align:right;">
+82
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+445
+</td>
+<td style="text-align:right;">
+2015
+</td>
+<td style="text-align:left;">
+Kyle Lowry
+</td>
+<td style="text-align:left;">
+PG
+</td>
+<td style="text-align:left;">
+Jun-00
+</td>
+<td style="text-align:right;">
+205
+</td>
+<td style="text-align:left;">
+Raptors
+</td>
+<td style="text-align:left;">
+Eastern All-Star Fan Vote Selection
+</td>
+<td style="text-align:left;">
+2006 Rnd 1 Pick 24
+</td>
+<td style="text-align:left;">
+United States
+</td>
+<td style="text-align:right;">
+2015
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:left;">
+812,863
+</td>
+<td style="text-align:left;">
+19,825
+</td>
+<td style="text-align:left;">
+100.1
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:left;">
+17,162
+</td>
+<td style="text-align:left;">
+89.2
+</td>
+<td style="text-align:right;">
+82
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+461
+</td>
+<td style="text-align:right;">
+2015
+</td>
+<td style="text-align:left;">
+Jimmy Butler
+</td>
+<td style="text-align:left;">
+GF
+</td>
+<td style="text-align:left;">
+7-Jun
+</td>
+<td style="text-align:right;">
+231
+</td>
+<td style="text-align:left;">
+Bulls
+</td>
+<td style="text-align:left;">
+Eastern All-Star Coaches Selection
+</td>
+<td style="text-align:left;">
+2011 Rnd 1 Pick 30
+</td>
+<td style="text-align:left;">
+United States
+</td>
+<td style="text-align:right;">
+2015
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:left;">
+894,659
+</td>
+<td style="text-align:left;">
+21,820
+</td>
+<td style="text-align:left;">
+104.3
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:left;">
+18,156
+</td>
+<td style="text-align:left;">
+94.5
+</td>
+<td style="text-align:right;">
+82
+</td>
+</tr>
+</tbody>
+</table>
+<p>I used the <em>left_join</em> function to join <code>nba_allstar</code> with <code>nba_attendance</code> by the common <em>Team</em> variable. I chose <em>left_join</em> because it would allow me to identify the number of All-Star players on each team from 2000-2015 and assess their impact on game attendance during the season(s) of their All-Star selection. Before joining, the <code>nba_allstar</code> dataset had 439 observations and the <code>nba_attendance</code> dataset had 476 observations. After joining, I modified the <code>combined_nba</code> dataset to retain all the observations in which the players' year of All-Star selection matched the year of fan attendance and dropped those that did not match, resulting in 410 observations for <code>combined_nba</code>.</p>
+</div>
+<div id="wrangling" class="section level3">
+<h3>Wrangling</h3>
+<pre class="r"><code>combined_nba &lt;- combined_nba %&gt;% select(Year, Player, Team, Home..Total.Attendance, 
+    Home..Total.Games, Away..Total.Attendance, Away..Total.Games)
+
+## Removes the commas in the numerical values
+combined_nba$Home..Total.Attendance &lt;- as.numeric(gsub(&quot;,&quot;, &quot;&quot;, 
+    combined_nba$Home..Total.Attendance, fixed = TRUE))
+combined_nba$Away..Total.Attendance &lt;- as.numeric(gsub(&quot;,&quot;, &quot;&quot;, 
+    combined_nba$Away..Total.Attendance, fixed = TRUE))
+
+summary &lt;- combined_nba %&gt;% summarize(Number.Allstars = n_distinct(Player), 
+    Mean.HomeAttendance = mean(Home..Total.Attendance), Median.HomeAttendance = median(Home..Total.Attendance), 
+    Min.HomeAttendance = min(Home..Total.Attendance), Max.HomeAttendance = max(Home..Total.Attendance))
+head(summary) %&gt;% kbl() %&gt;% kable_styling</code></pre>
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:right;">
+Number.Allstars
+</th>
+<th style="text-align:right;">
+Mean.HomeAttendance
+</th>
+<th style="text-align:right;">
+Median.HomeAttendance
+</th>
+<th style="text-align:right;">
+Min.HomeAttendance
+</th>
+<th style="text-align:right;">
+Max.HomeAttendance
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:right;">
+115
+</td>
+<td style="text-align:right;">
+734950.8
+</td>
+<td style="text-align:right;">
+744961
+</td>
+<td style="text-align:right;">
+460719
+</td>
+<td style="text-align:right;">
+913175
+</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>stacked_teams &lt;- combined_nba %&gt;% filter(n_distinct(Player) &gt;= 
+    2) %&gt;% select(Team, Year, Home..Total.Attendance) %&gt;% arrange(desc(Home..Total.Attendance))
+head(stacked_teams) %&gt;% kbl() %&gt;% kable_styling</code></pre>
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+Team
+</th>
+<th style="text-align:right;">
+Year
+</th>
+<th style="text-align:right;">
+Home..Total.Attendance
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Spurs
+</td>
+<td style="text-align:right;">
+2000
+</td>
+<td style="text-align:right;">
+913175
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Spurs
+</td>
+<td style="text-align:right;">
+2000
+</td>
+<td style="text-align:right;">
+913175
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Spurs
+</td>
+<td style="text-align:right;">
+2001
+</td>
+<td style="text-align:right;">
+906390
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Pistons
+</td>
+<td style="text-align:right;">
+2007
+</td>
+<td style="text-align:right;">
+905116
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Pistons
+</td>
+<td style="text-align:right;">
+2007
+</td>
+<td style="text-align:right;">
+905116
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Pistons
+</td>
+<td style="text-align:right;">
+2007
+</td>
+<td style="text-align:right;">
+905116
+</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>combined_nba &lt;- combined_nba %&gt;% mutate(Attendance.perHomeGame = Home..Total.Attendance/Home..Total.Games) %&gt;% 
+    arrange(-Attendance.perHomeGame)
+head(combined_nba) %&gt;% kbl() %&gt;% kable_styling()</code></pre>
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:right;">
+Year
+</th>
+<th style="text-align:left;">
+Player
+</th>
+<th style="text-align:left;">
+Team
+</th>
+<th style="text-align:right;">
+Home..Total.Attendance
+</th>
+<th style="text-align:right;">
+Home..Total.Games
+</th>
+<th style="text-align:right;">
+Away..Total.Attendance
+</th>
+<th style="text-align:right;">
+Away..Total.Games
+</th>
+<th style="text-align:right;">
+Attendance.perHomeGame
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:right;">
+2000
+</td>
+<td style="text-align:left;">
+Tim Duncan
+</td>
+<td style="text-align:left;">
+Spurs
+</td>
+<td style="text-align:right;">
+913175
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:right;">
+16690
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:right;">
+22272.56
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+2000
+</td>
+<td style="text-align:left;">
+David Robinson
+</td>
+<td style="text-align:left;">
+Spurs
+</td>
+<td style="text-align:right;">
+913175
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:right;">
+16690
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:right;">
+22272.56
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+2011
+</td>
+<td style="text-align:left;">
+Derrick Rose
+</td>
+<td style="text-align:left;">
+Bulls
+</td>
+<td style="text-align:right;">
+731326
+</td>
+<td style="text-align:right;">
+33
+</td>
+<td style="text-align:right;">
+17989
+</td>
+<td style="text-align:right;">
+33
+</td>
+<td style="text-align:right;">
+22161.39
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+2011
+</td>
+<td style="text-align:left;">
+Luol Deng
+</td>
+<td style="text-align:left;">
+Bulls
+</td>
+<td style="text-align:right;">
+731326
+</td>
+<td style="text-align:right;">
+33
+</td>
+<td style="text-align:right;">
+17989
+</td>
+<td style="text-align:right;">
+33
+</td>
+<td style="text-align:right;">
+22161.39
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+2001
+</td>
+<td style="text-align:left;">
+Tim Duncan
+</td>
+<td style="text-align:left;">
+Spurs
+</td>
+<td style="text-align:right;">
+906390
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:right;">
+17248
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:right;">
+22107.07
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+2007
+</td>
+<td style="text-align:left;">
+Chauncey Billups
+</td>
+<td style="text-align:left;">
+Pistons
+</td>
+<td style="text-align:right;">
+905116
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:right;">
+17714
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:right;">
+22076.00
+</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>Mean_Sd &lt;- combined_nba %&gt;% group_by(Team, Year) %&gt;% summarize(Home.meanAttendance = mean(Home..Total.Attendance), 
+    Home.sdAttendance = sd(Home..Total.Attendance), Away.meanAttendance = mean(Away..Total.Attendance), 
+    Away.sdAttendance = sd(Away..Total.Attendance))
+head(Mean_Sd) %&gt;% kbl() %&gt;% kable_styling()</code></pre>
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+Team
+</th>
+<th style="text-align:right;">
+Year
+</th>
+<th style="text-align:right;">
+Home.meanAttendance
+</th>
+<th style="text-align:right;">
+Home.sdAttendance
+</th>
+<th style="text-align:right;">
+Away.meanAttendance
+</th>
+<th style="text-align:right;">
+Away.sdAttendance
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+76ers
+</td>
+<td style="text-align:right;">
+2000
+</td>
+<td style="text-align:right;">
+805692
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+18582
+</td>
+<td style="text-align:right;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+76ers
+</td>
+<td style="text-align:right;">
+2001
+</td>
+<td style="text-align:right;">
+842976
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+18720
+</td>
+<td style="text-align:right;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+76ers
+</td>
+<td style="text-align:right;">
+2002
+</td>
+<td style="text-align:right;">
+807097
+</td>
+<td style="text-align:right;">
+NA
+</td>
+<td style="text-align:right;">
+18408
+</td>
+<td style="text-align:right;">
+NA
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+76ers
+</td>
+<td style="text-align:right;">
+2003
+</td>
+<td style="text-align:right;">
+788128
+</td>
+<td style="text-align:right;">
+NA
+</td>
+<td style="text-align:right;">
+17672
+</td>
+<td style="text-align:right;">
+NA
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+76ers
+</td>
+<td style="text-align:right;">
+2004
+</td>
+<td style="text-align:right;">
+732686
+</td>
+<td style="text-align:right;">
+NA
+</td>
+<td style="text-align:right;">
+17933
+</td>
+<td style="text-align:right;">
+NA
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+76ers
+</td>
+<td style="text-align:right;">
+2005
+</td>
+<td style="text-align:right;">
+677278
+</td>
+<td style="text-align:right;">
+NA
+</td>
+<td style="text-align:right;">
+18627
+</td>
+<td style="text-align:right;">
+NA
+</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>Min_Max_Median &lt;- combined_nba %&gt;% group_by(Team, Year) %&gt;% summarize(Home.minAttendance = min(Home..Total.Attendance), 
+    Home.maxAttendance = max(Home..Total.Attendance), Home.medianAttendance = median(Home..Total.Attendance), 
+    Away.minAttendance = min(Away..Total.Attendance), Away.maxAttendance = max(Away..Total.Attendance), 
+    Away.medianAttendance = median(Away..Total.Attendance))
+head(Min_Max_Median) %&gt;% kbl %&gt;% kable_styling()</code></pre>
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+Team
+</th>
+<th style="text-align:right;">
+Year
+</th>
+<th style="text-align:right;">
+Home.minAttendance
+</th>
+<th style="text-align:right;">
+Home.maxAttendance
+</th>
+<th style="text-align:right;">
+Home.medianAttendance
+</th>
+<th style="text-align:right;">
+Away.minAttendance
+</th>
+<th style="text-align:right;">
+Away.maxAttendance
+</th>
+<th style="text-align:right;">
+Away.medianAttendance
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+76ers
+</td>
+<td style="text-align:right;">
+2000
+</td>
+<td style="text-align:right;">
+805692
+</td>
+<td style="text-align:right;">
+805692
+</td>
+<td style="text-align:right;">
+805692
+</td>
+<td style="text-align:right;">
+18582
+</td>
+<td style="text-align:right;">
+18582
+</td>
+<td style="text-align:right;">
+18582
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+76ers
+</td>
+<td style="text-align:right;">
+2001
+</td>
+<td style="text-align:right;">
+842976
+</td>
+<td style="text-align:right;">
+842976
+</td>
+<td style="text-align:right;">
+842976
+</td>
+<td style="text-align:right;">
+18720
+</td>
+<td style="text-align:right;">
+18720
+</td>
+<td style="text-align:right;">
+18720
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+76ers
+</td>
+<td style="text-align:right;">
+2002
+</td>
+<td style="text-align:right;">
+807097
+</td>
+<td style="text-align:right;">
+807097
+</td>
+<td style="text-align:right;">
+807097
+</td>
+<td style="text-align:right;">
+18408
+</td>
+<td style="text-align:right;">
+18408
+</td>
+<td style="text-align:right;">
+18408
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+76ers
+</td>
+<td style="text-align:right;">
+2003
+</td>
+<td style="text-align:right;">
+788128
+</td>
+<td style="text-align:right;">
+788128
+</td>
+<td style="text-align:right;">
+788128
+</td>
+<td style="text-align:right;">
+17672
+</td>
+<td style="text-align:right;">
+17672
+</td>
+<td style="text-align:right;">
+17672
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+76ers
+</td>
+<td style="text-align:right;">
+2004
+</td>
+<td style="text-align:right;">
+732686
+</td>
+<td style="text-align:right;">
+732686
+</td>
+<td style="text-align:right;">
+732686
+</td>
+<td style="text-align:right;">
+17933
+</td>
+<td style="text-align:right;">
+17933
+</td>
+<td style="text-align:right;">
+17933
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+76ers
+</td>
+<td style="text-align:right;">
+2005
+</td>
+<td style="text-align:right;">
+677278
+</td>
+<td style="text-align:right;">
+677278
+</td>
+<td style="text-align:right;">
+677278
+</td>
+<td style="text-align:right;">
+18627
+</td>
+<td style="text-align:right;">
+18627
+</td>
+<td style="text-align:right;">
+18627
+</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>Quant &lt;- combined_nba %&gt;% group_by(Team, Year) %&gt;% summarize(Home.QuantileAtt = quantile(Home..Total.Attendance), 
+    Away.QuantileAtt = quantile(Away..Total.Attendance))
+head(Quant) %&gt;% kbl %&gt;% kable_styling()</code></pre>
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+Team
+</th>
+<th style="text-align:right;">
+Year
+</th>
+<th style="text-align:right;">
+Home.QuantileAtt
+</th>
+<th style="text-align:right;">
+Away.QuantileAtt
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+76ers
+</td>
+<td style="text-align:right;">
+2000
+</td>
+<td style="text-align:right;">
+805692
+</td>
+<td style="text-align:right;">
+18582
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+76ers
+</td>
+<td style="text-align:right;">
+2000
+</td>
+<td style="text-align:right;">
+805692
+</td>
+<td style="text-align:right;">
+18582
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+76ers
+</td>
+<td style="text-align:right;">
+2000
+</td>
+<td style="text-align:right;">
+805692
+</td>
+<td style="text-align:right;">
+18582
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+76ers
+</td>
+<td style="text-align:right;">
+2000
+</td>
+<td style="text-align:right;">
+805692
+</td>
+<td style="text-align:right;">
+18582
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+76ers
+</td>
+<td style="text-align:right;">
+2000
+</td>
+<td style="text-align:right;">
+805692
+</td>
+<td style="text-align:right;">
+18582
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+76ers
+</td>
+<td style="text-align:right;">
+2001
+</td>
+<td style="text-align:right;">
+842976
+</td>
+<td style="text-align:right;">
+18720
+</td>
+</tr>
+</tbody>
+</table>
+<p>For the whole <code>combined_nba</code> dataset, the total number of All-Stars selections from 2000-2015 was 115, the mean home attendance was 734,951, the median home attendance was 744,961, the minimum home attendance was 460,719, and the maximum home attendance was 913,175. Teams with at least 2 All-Stars are shown under the <code>stacked_teams</code> dataset, which displays greater home attendance than the mean. Furthermore, I used <em>mutate</em> to create a variable called <em>Attendance.perHomeGame</em> which divides the total home attendance for each team by the number of home games during the season.</p>
+<p>In the next few datasets, I grouped <code>combined_nba</code> by Team and Year to determine some summary statistics of game attendance for specific teams in each seasons for home and away games. In <code>Mean_Sd</code>, I summarized the mean and standard deviation of game attendance for each team each year. In <code>Min_Max_Median</code>, I summarized the minimum, median, and maximum game attendance for each team each year. In <code>Quant</code>, the quantile of game attendance is illustrated for each team each year.</p>
+</div>
+<div id="visualizing" class="section level3">
+<h3>Visualizing</h3>
+<pre class="r"><code>combined_nba %&gt;% select(-Player, -Team) %&gt;% cor %&gt;% as.data.frame %&gt;% 
+    rownames_to_column %&gt;% pivot_longer(-1) %&gt;% ggplot(aes(rowname, 
+    name, fill = value)) + geom_tile() + geom_text(aes(label = round(value, 
+    2))) + xlab(&quot;&quot;) + ylab(&quot;&quot;) + coord_fixed() + scale_fill_gradient2(low = &quot;red&quot;, 
+    mid = &quot;white&quot;, high = &quot;blue&quot;)</code></pre>
+<p><img src="/project/project1_files/figure-html/unnamed-chunk-3-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>There are no strong correlations illustrated by the correlation heatmap. A medium strength correlation of 0.4 occurs between the total home attendance and total away attendance. I expected this moderate correlation between the two variables because teams that have large numbers of zealous fans at home games would likely experience more fan attendance in road games as well.</p>
+<pre class="r"><code>ggplot(data = combined_nba, aes(x = Home..Total.Attendance, y = Away..Total.Attendance, 
+    color = Team)) + geom_point() + scale_y_continuous(breaks = seq(16000, 
+    20000, 1000)) + xlab(&quot;Total Home Attendance&quot;) + ylab(&quot;Total Away Attendance&quot;) + 
+    ggtitle(&quot;NBA Game Attendance, 2000-2015&quot;) + theme(plot.title = element_text(size = 15, 
+    color = &quot;turquoise&quot;, face = &quot;bold&quot;))</code></pre>
+<p><img src="/project/project1_files/figure-html/unnamed-chunk-4-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>The scatterplot demonstrates a moderately positive association between total home attendance and total away attendance. This positive association can be seen across numerous teams, suggesting that there is a relation betweee home and away game attendance across the NBA. I predicted this association because fans of huge basketball cities like LA, Boston, and Chicago will naturally have higher turnout in home and away games for the Lakers, Celtics, and Bulls, respectively. The All-Stars in these 3 popular teams, along with many other teams, not only excite home audiences but also entice many supporters and opponents in as the visiting team in other cities.</p>
+<pre class="r"><code>ggplot(data = combined_nba, aes(x = Year, y = Attendance.perHomeGame, 
+    fill = Team)) + facet_wrap(~Team) + geom_bar(stat = &quot;summary&quot;, 
+    fun = mean, na.rm = T) + ylab(&quot;Average Fan Attendance per Home Game&quot;) + 
+    ggtitle(&quot;Home Game Attendance for NBA Teams&quot;) + theme(plot.title = element_text(size = 15, 
+    color = &quot;Orange&quot;, face = &quot;bold&quot;)) + scale_color_continuous()</code></pre>
+<p><img src="/project/project1_files/figure-html/unnamed-chunk-5-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>The faceted barplot above illustrates the mean attendance per home game from 2000-2015 and is faceted by NBA team. As a basketball fan, these results make sense because consistently good teams like the Spurs and the Lakers will draw large home crowds, as exhibited by their plateau graphs. Teams like the Rockets and Thunder acquired several star players during the early 2010s, which supports their increase in home game attendance over time as their performance improved and their All-Stars captivated crowds. The discontinuation of game attendance for the Hornets and the sudden appearance of fans for the Pelicans between 2010-2015 can be explained by the fact that the New Orleans Hornets changed their team name to the Pelicans in 2013. Such organizational changes are applicable to other teams too.</p>
+</div>
+<div id="dimensionality-reduction" class="section level3">
+<h3>Dimensionality Reduction</h3>
+<pre class="r"><code>nba1 &lt;- combined_nba %&gt;% select(-1, -Player, -Team)
+nba_nums &lt;- nba1 %&gt;% select_if(is.numeric) %&gt;% scale
+rownames(nba_nums) &lt;- nba1$Name
+nba_pca &lt;- princomp(nba_nums)
+names(nba_pca)</code></pre>
+<pre><code>## [1] &quot;sdev&quot;     &quot;loadings&quot; &quot;center&quot;   &quot;scale&quot;    &quot;n.obs&quot;    &quot;scores&quot;   &quot;call&quot;</code></pre>
+<pre class="r"><code>summary(nba_pca, loadings = T)</code></pre>
+<pre><code>## Importance of components:
+##                           Comp.1    Comp.2    Comp.3      Comp.4       Comp.5
+## Standard deviation     1.5569441 1.3775302 0.8123013 0.072236454 0.0330019351
+## Proportion of Variance 0.4860004 0.3804458 0.1322893 0.001046173 0.0002183581
+## Cumulative Proportion  0.4860004 0.8664461 0.9987355 0.999781642 1.0000000000
+## 
+## Loadings:
+##                        Comp.1 Comp.2 Comp.3 Comp.4 Comp.5
+## Home..Total.Attendance  0.588  0.231  0.294  0.178  0.694
+## Home..Total.Games       0.441 -0.522 -0.106  0.648 -0.320
+## Away..Total.Attendance  0.275  0.406 -0.871              
+## Away..Total.Games       0.438 -0.524 -0.104 -0.722       
+## Attendance.perHomeGame  0.438  0.484  0.363 -0.167 -0.643</code></pre>
+<p>The code above cleans the data and selects for numeric variables only by eliminating <em>Player</em> and <em>Team</em>. The data is then normalized and scaled. The scaled data is inputted into princomp() to display the different PC values and their standard deviations, proportion of variance, and cumulative proportion.</p>
+<pre class="r"><code>eigval &lt;- nba_pca$sdev^2
+varprop = round(eigval/sum(eigval), 2)
+
+ggplot() + geom_bar(aes(y = varprop, x = 1:5), stat = &quot;identity&quot;) + 
+    xlab(&quot;&quot;) + geom_text(aes(x = 1:5, y = varprop, label = round(varprop, 
+    2)), vjust = 1, col = &quot;white&quot;, size = 5) + scale_y_continuous(breaks = seq(0, 
+    0.6, 0.2), labels = scales::percent) + scale_x_continuous(breaks = 1:10)</code></pre>
+<p><img src="/project/project1_files/figure-html/unnamed-chunk-7-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>This code segment produces a plot of variance proportion that can be employed to decide how many PCs to keep. In this case, the cumulative proportion is 0.866 at PC2, which is greater than 80%. Therefore, I am keeping PC1 and PC2.</p>
+<pre class="r"><code>library(factoextra)
+fviz_pca_biplot(nba_pca)</code></pre>
+<p><img src="/project/project1_files/figure-html/unnamed-chunk-8-1.png" width="672" style="display: block; margin: auto;" /></p>
+<p>This last code segment creates a biplot that allows us to visualize and interpret the numerical variables in relation to each other. As shown by the biplot, all variables except Home..Total.Games and Away..Total.Games extend into the 1st quadrant. This means that those Home..Total.Attendance, Away..Total.Attendance, and Attendance.perHomeGame have positive correlations for both PC1 and PC2 while Home..Total.Games and Away..Total.Games has a positive correlation for PC1 and a negative correlation for PC2. Consequently, PC1 is a general strength axis because all 5 numerical variables are positively associated. For example, as the number of fans attending home games increases, the number of fans attending away games is also expected to increase. On the other hand, PC2 is an axis of tradeoff between the variables in quadrant 1 (Home..Total.Attendance, Away..Total.Attendance, and Attendance.perHomeGame) versus those in quadrant 2 (Home..Total.Games and Away..Total.Games). For instance, as the number of total home games increases, the attendance per home game is expected to decrease.</p>
+</div>
